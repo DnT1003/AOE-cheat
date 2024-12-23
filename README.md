@@ -42,7 +42,27 @@ cd DLL-1
 - Copy the `DLL-1.dll` into `/Injector/Debug/Injector.exe`, change filename to `cheat-32bit.dll` and run the `Injector.exe` 
 
 
-![alt text](Images/image1.png)
+## Functionality
+- Use hotket F2, F6, F7, F8, F9 
+- F2: Toogle steroids: Increase the building speed of all buildings, units, and researches
+- F6: Increase the amount of food, wood, gold, and stone by 10000 
+- F7: Set Population LIMIT to 200 
+- F8: Set Population to 0 (Unlimited Population)
+- F9: Increase resource when spending 
+
+```
+TODO: 
+- No Fog and Reveal Map cheat 
+- Function Detour to hook message box to display cheat after pressing F1 -> F12 keys
+- ASM code to hijack others player's resources
+```
+
+## On-going Research 
+
+- Found an array of ALL our player current object (unit, building, resource) in the game memory, be able to modify it to our advantage but not yet found a way to create a cheat with it.
+- Found a function that display message box, trying to hook it and display our message box.
+- Sound affect of Game is stored in a .wav file, trying to replace it with our own sound affect.
+
 
 # Remember 
 - The game **MUST** already run to be able to inject 
