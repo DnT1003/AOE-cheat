@@ -26,6 +26,139 @@ DWORD GetModuleBaseAddress(TCHAR* lpszModuleName, DWORD pID) {
 }
 
 
+
+// Exported function with parameters
+__declspec(dllexport) int Add(int a, int b) {
+    return a + b;
+}
+
+
+// Add Food by Amount
+__declspec(dllexport) void AddFood(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[], float Amount) {
+	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
+	float currentFood;
+
+    ReadProcessMemory(TargetProcess, (LPVOID)(address), &currentFood, sizeof(currentFood), NULL);
+	float AddAmount = Amount;
+	float newFood = currentFood + AddAmount;
+	WriteProcessMemory(TargetProcess, (LPVOID)address, &newFood, sizeof(newFood), 0);
+}
+
+
+// Add Wood by Amount
+__declspec(dllexport) void AddWood(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[], float Amount) {
+    DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
+    float currentWood;
+
+    ReadProcessMemory(TargetProcess, (LPVOID)(address), &currentWood, sizeof(currentWood), NULL);
+    float AddAmount = Amount;
+    float newWood = currentWood + AddAmount;
+    WriteProcessMemory(TargetProcess, (LPVOID)address, &newWood, sizeof(newWood), 0);
+}
+
+
+// Add Gold by Amount
+__declspec(dllexport) void AddGold(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[], float Amount) {
+	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
+	float currentGold;
+
+    ReadProcessMemory(TargetProcess, (LPVOID)(address), &currentGold, sizeof(currentGold), NULL);
+	float AddAmount = Amount;
+	float newGold = currentGold + AddAmount;
+	WriteProcessMemory(TargetProcess, (LPVOID)address, &newGold, sizeof(newGold), 0);
+}
+
+
+// Add Stone by Amount
+__declspec(dllexport) void AddStone(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[], float Amount) {
+	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
+	float currentStone;
+
+    ReadProcessMemory(TargetProcess, (LPVOID)(address), &currentStone, sizeof(currentStone), NULL);
+	float AddAmount = Amount;
+	float newStone = currentStone + AddAmount;
+	WriteProcessMemory(TargetProcess, (LPVOID)address, &newStone, sizeof(newStone), 0);
+}
+
+
+// Add all resources by Amount
+__declspec(dllexport) void AddAllResources(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[], float Amount) {
+	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
+	float currentFood;
+	float currentWood;
+	float currentStone;
+	float currentGold;
+	float AddAmount = Amount;
+
+    ReadProcessMemory(TargetProcess, (LPVOID)(address), &currentFood, sizeof(currentFood), NULL);
+    ReadProcessMemory(TargetProcess, (LPVOID)(address), &currentWood, sizeof(currentWood), NULL);
+    ReadProcessMemory(TargetProcess, (LPVOID)(address), &currentStone, sizeof(currentStone), NULL);
+    ReadProcessMemory(TargetProcess, (LPVOID)(address), &currentGold, sizeof(currentGold), NULL);
+
+	float newFood = currentFood + AddAmount;
+	float newWood = currentWood + AddAmount;
+	float newStone = currentStone + AddAmount;
+	float newGold = currentGold + AddAmount;
+	WriteProcessMemory(TargetProcess, (LPVOID)address, &newFood, sizeof(newFood), 0);
+	WriteProcessMemory(TargetProcess, (LPVOID)(address + 4), &newWood, sizeof(newWood), 0);
+	WriteProcessMemory(TargetProcess, (LPVOID)(address + 8), &newStone, sizeof(newStone), 0);
+	WriteProcessMemory(TargetProcess, (LPVOID)(address + 12), &newGold, sizeof(newGold), 0);
+}
+
+
+// Enable Steroids
+__declspec(dllexport) void ToogleOnSteroids(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[], float Amount) {
+	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
+	BYTE SteroidsBytes[] = { 0x1 }; // Enable
+	WriteProcessMemory(TargetProcess, (LPVOID)address, &SteroidsBytes, sizeof(SteroidsBytes), 0);
+}
+
+
+// Disable Steroids
+__declspec(dllexport) void ToogleOffSteroids(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[], float Amount) {
+	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
+	BYTE SteroidsBytes[] = { 0x0 }; // Disable
+	WriteProcessMemory(TargetProcess, (LPVOID)address, &SteroidsBytes, sizeof(SteroidsBytes), 0);
+}
+
+
+// Activate Full Population
+__declspec(dllexport) void ActivateFullPopulation(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[]) {
+	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
+	float currentPopulation;
+	float newPopulation = 10000;
+	WriteProcessMemory(TargetProcess, (LPVOID)address, &newPopulation, sizeof(newPopulation), 0);
+}
+
+
+// Reset population to 0
+__declspec(dllexport) void ResetPopulation(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[]) {
+	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
+	float resetPop = 0;
+	WriteProcessMemory(TargetProcess, (LPVOID)address, &resetPop, sizeof(resetPop), 0);
+}
+
+
+// Add resource when buying something
+__declspec(dllexport) void ToogleResourceHack(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[]) {
+	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
+	BYTE faddBytes[] = { 0xD8, 0xC1 }; //fadd
+	BYTE OriginalBytes[] = { 0xD8, 0xE1 }; //fsub
+	WriteProcessMemory(TargetProcess, (LPVOID)address, faddBytes, sizeof(faddBytes), 0);
+}
+
+
+// Retrieve target address
+DWORD GetTargetAdress(DWORD baseAddress, DWORD offsets[], HANDLE processHandle , int size) {
+	DWORD address = baseAddress;
+	for (int i = 0; i < size - 1; i++) {
+		ReadProcessMemory(processHandle, (LPVOID)(address + offsets[i]), &address, sizeof(address), NULL);
+	}
+	address += offsets[size - 1];
+	return address;
+}
+
+
 // Thread chính
 DWORD WINAPI MainThread(LPVOID param) {
     BOOLEAN toogleMap = 0; 

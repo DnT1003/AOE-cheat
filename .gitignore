@@ -27,6 +27,7 @@ Debug/
 Release/
 x64/
 x86/
+.idea/
 
 # IDE-specific files
 *.VC.db
