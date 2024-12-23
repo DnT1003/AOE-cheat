@@ -25,13 +25,51 @@ DWORD GetModuleBaseAddress(TCHAR* lpszModuleName, DWORD pID) {
     return dwModuleBaseAddress;
 }
 
+
 // Thread chính
 DWORD WINAPI MainThread(LPVOID param) {
     BOOLEAN toogleMap = 0; 
     BOOLEAN toogleResource = 0; 
+	BOOLEAN toogleSteroids = 0; 
+    
 
     while (1) {
-        if (GetAsyncKeyState(VK_F6) & 0x8000) {
+        if (GetAsyncKeyState(VK_F2 ) & 0x8000) {
+            toogleSteroids = !toogleSteroids; // Toggle state at the start of the function
+
+            HWND hGameWindow = FindWindow(NULL, L"Age of Empires Expansion");
+
+            DWORD pID = 0;
+            GetWindowThreadProcessId(hGameWindow, &pID);
+            HANDLE processHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pID);
+
+            TCHAR gameName[13];
+            wcscpy_s(gameName, 13, L"Empiresx.exe");
+            DWORD gameBaseAddress = GetModuleBaseAddress(gameName, pID);
+            DWORD offsetGameToBaseAddress = 0x003C4B18;
+            DWORD Offset[] = { 0x1C, 0x14 , 0x4 , 0x158, 0xDA4 };
+
+            DWORD baseAddress = 0;
+            ReadProcessMemory(processHandle, (LPVOID)(gameBaseAddress + offsetGameToBaseAddress), &baseAddress, sizeof(baseAddress), NULL);
+            DWORD pointsAddress = baseAddress;
+            for (int i = 0; i < sizeof(Offset) / sizeof(Offset[0]) - 1; i++) {
+                ReadProcessMemory(processHandle, (LPVOID)(pointsAddress + Offset[i]), &pointsAddress, sizeof(pointsAddress), NULL);
+            }
+            pointsAddress += Offset[sizeof(Offset) / sizeof(Offset[0]) - 1];
+
+            // Toggle Steroids
+            if (toogleSteroids == 1) {
+                BYTE SteroidsBytes[] = { 0x1 }; // Enable
+                WriteProcessMemory(processHandle, (LPVOID)pointsAddress, &SteroidsBytes, sizeof(SteroidsBytes), 0);
+            }
+            else {
+                BYTE SteroidsBytes[] = { 0x0 }; // Disable
+                WriteProcessMemory(processHandle, (LPVOID)pointsAddress, &SteroidsBytes, sizeof(SteroidsBytes), 0);
+            }  
+		}
+        Sleep(100);
+
+        if (GetAsyncKeyState(VK_F6 ) & 0x8000) {
             // +10000 Food, Wood, Gold, Stone 
             HWND hGameWindow = FindWindow(NULL, L"Age of Empires Expansion");
 
@@ -84,7 +122,7 @@ DWORD WINAPI MainThread(LPVOID param) {
         }
         Sleep(100);
 
-        if (GetAsyncKeyState(VK_F7) & 0x8000) {
+        if (GetAsyncKeyState(VK_F7 ) & 0x8000) {
             // Có ngay max population = 200 
             HWND hGameWindow = FindWindow(NULL, L"Age of Empires Expansion");
 
@@ -121,7 +159,7 @@ DWORD WINAPI MainThread(LPVOID param) {
         }
         Sleep(100); 
 
-        if (GetAsyncKeyState(VK_F8) & 0x8000) {
+        if (GetAsyncKeyState(VK_F8 ) & 0x8000) {
             // Reset dân số hiện tại về 0 -> Unlimited dân số 
             HWND hGameWindow = FindWindow(NULL, L"Age of Empires Expansion");
 
@@ -156,7 +194,7 @@ DWORD WINAPI MainThread(LPVOID param) {
         }
         Sleep(100);
 
-        if (GetAsyncKeyState(VK_F9) & 0x8000) {
+        if (GetAsyncKeyState(VK_F9 ) & 0x8000) {
             // Unlimited resource hack (Khi tiêu thụ resource sẽ + thay vì -) Full luôn :D 
             toogleResource = !toogleResource;
 
@@ -195,6 +233,7 @@ DWORD WINAPI MainThread(LPVOID param) {
             toogleMap != toogleMap; 
         }
         Sleep(100);
+
         if (GetAsyncKeyState(VK_F11) & 0x8000) {
             // Xem hết thông tin đối thủ
         }
@@ -202,6 +241,8 @@ DWORD WINAPI MainThread(LPVOID param) {
     }
     return 0;
 }
+
+
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
