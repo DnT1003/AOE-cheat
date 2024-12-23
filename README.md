@@ -52,7 +52,7 @@ Use hotket F2, F6, F7, F8, F9
 
 Update: 
 - Export function to be able to call from external program
-![alt text](Images/ExportFunc.png.png)
+![alt text](Images/ExportFunc.png)
 
 ```
 TODO: 
