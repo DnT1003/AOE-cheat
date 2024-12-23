@@ -35,6 +35,7 @@ DWORD WINAPI MainThread(LPVOID param) {
 
     while (1) {
         if (GetAsyncKeyState(VK_F2 ) & 0x8000) {
+            // Steroids Cheat
             toogleSteroids = !toogleSteroids; // Toggle state at the start of the function
 
             HWND hGameWindow = FindWindow(NULL, L"Age of Empires Expansion");
