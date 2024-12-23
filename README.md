@@ -43,12 +43,16 @@ cd DLL-1
 
 
 ## Functionality
-- Use hotket F2, F6, F7, F8, F9 
+Use hotket F2, F6, F7, F8, F9 
 - F2: Toogle steroids: Increase the building speed of all buildings, units, and researches
 - F6: Increase the amount of food, wood, gold, and stone by 10000 
 - F7: Set Population LIMIT to 200 
 - F8: Set Population to 0 (Unlimited Population)
 - F9: Increase resource when spending 
+
+Update: 
+- Export function to be able to call from external program
+![alt text](Images/ExportFunc.png.png)
 
 ```
 TODO: 
