@@ -26,11 +26,22 @@ DWORD GetModuleBaseAddress(TCHAR* lpszModuleName, DWORD pID) {
 }
 
 
-
 // Exported function with parameters
 __declspec(dllexport) int Add(int a, int b) {
     return a + b;
 }
+
+
+// Retrieve target address
+__declspec(dllexport) DWORD GetTargetAdress(DWORD baseAddress, DWORD offsets[], HANDLE processHandle, int size) {
+    DWORD address = baseAddress;
+    for (int i = 0; i < size - 1; i++) {
+        ReadProcessMemory(processHandle, (LPVOID)(address + offsets[i]), &address, sizeof(address), NULL);
+    }
+    address += offsets[size - 1];
+    return address;
+}
+
 
 
 // Add Food by Amount
@@ -107,7 +118,7 @@ __declspec(dllexport) void AddAllResources(HANDLE TargetProcess, DWORD baseAddre
 
 
 // Enable Steroids
-__declspec(dllexport) void ToogleOnSteroids(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[], float Amount) {
+__declspec(dllexport) void ToogleOnSteroids(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[]) {
 	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
 	BYTE SteroidsBytes[] = { 0x1 }; // Enable
 	WriteProcessMemory(TargetProcess, (LPVOID)address, &SteroidsBytes, sizeof(SteroidsBytes), 0);
@@ -115,7 +126,7 @@ __declspec(dllexport) void ToogleOnSteroids(HANDLE TargetProcess, DWORD baseAddr
 
 
 // Disable Steroids
-__declspec(dllexport) void ToogleOffSteroids(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[], float Amount) {
+__declspec(dllexport) void ToogleOffSteroids(HANDLE TargetProcess, DWORD baseAddress, DWORD offsets[]) {
 	DWORD address = GetTargetAdress(baseAddress, offsets, TargetProcess, sizeof(offsets) / sizeof(offsets[0]));
 	BYTE SteroidsBytes[] = { 0x0 }; // Disable
 	WriteProcessMemory(TargetProcess, (LPVOID)address, &SteroidsBytes, sizeof(SteroidsBytes), 0);
@@ -148,14 +159,83 @@ __declspec(dllexport) void ToogleResourceHack(HANDLE TargetProcess, DWORD baseAd
 }
 
 
-// Retrieve target address
-DWORD GetTargetAdress(DWORD baseAddress, DWORD offsets[], HANDLE processHandle , int size) {
-	DWORD address = baseAddress;
-	for (int i = 0; i < size - 1; i++) {
-		ReadProcessMemory(processHandle, (LPVOID)(address + offsets[i]), &address, sizeof(address), NULL);
+
+
+// Hooking Steps
+// 1. Viết Function declspec(naked) cho inline asm 
+// 2. Lấy địa chỉ của hàm cần hook
+// 3. Thay đổi protection của trang memory để có thể ghi vào nó
+// 4. Copy length bytes của hàm cần hook (Cần ít nhất 5 bytes vì 1 lệnh jmp có 5 bytes 1 byte opcode 4 byte địa chỉ)
+// 5. Thêm lệnh jmp đến hàm hook
+// 6. Thêm lệnh jmp đến hàm gốc
+// Skeleton For Hooking 
+
+
+BOOL InstallHook(void* toHook, void* ourFunct, int len) {
+	if (len < 5) {
+		return FALSE;
+	} // Minimum 5 bytes for a jump instruction
+
+
+	// Update protection of the memory page to be able to write to it
+	DWORD curProtection;
+	VirtualProtect(toHook, len, PAGE_EXECUTE_READWRITE, &curProtection);
+
+
+	// Copy the original bytes
+	memset(toHook, 0x90, len); // Fill remaining bytes with NOP
+
+	// Calculate the relative address by subtracting the address of the function to hook from the address of our function
+	DWORD relativeAddress = ((DWORD)ourFunct - (DWORD)toHook) - 5; 
+	*(BYTE*)toHook = 0xE9; // JMP
+
+	// Write the address to the next 4 bytes
+	*(DWORD*)((DWORD)toHook + 1) = relativeAddress; // Relative address from the jmp instruction to our function
+
+	// Restore the original protection
+	DWORD temp;
+	VirtualProtect(toHook, len, curProtection, &temp);
+	return TRUE;
+}
+
+/*
+0045DF1A | 66:3B41 4C                 | cmp ax,word ptr ds:[ecx+4C]                     |
+0045DF1E | 7D 12                      | jge empiresx.45DF32                             |
+0045DF20 | 8B49 50                    | mov ecx,dword ptr ds:[ecx+50]                   |
+0045DF23 | D94424 08                  | fld dword ptr ss:[esp+8]                        |
+0045DF27 | 0FBFC0                     | movsx eax,ax                                    |
+0045DF2A | D80481                     | fadd dword ptr ds:[ecx+eax*4]                   |
+0045DF2D | 8D0481                     | lea eax,dword ptr ds:[ecx+eax*4]                |
+0045DF30 | D918                       | fstp dword ptr ds:[eax]   
+*/
+
+
+DWORD OriginalAddress = 0x0045DF2A;                 // Address of the original function
+__declspec(naked) void HookFunc() {
+	__asm {
+        // Modify the floating-point value being loaded
+        mov dword ptr[esp + 8], 100   // Adjust the value at [esp + 8]
+        // Execute the original instructions
+        fld dword ptr[esp + 8]          // Restore original instruction
+        movsx eax, ax                   // Restore original instruction
+
+        // Jump back to the original code
+		jmp OriginalAddress		    // Jump back to the original code
 	}
-	address += offsets[size - 1];
-	return address;
+}
+
+
+DWORD OriginalAddress = 0x004F3B66;
+__declspec(naked) void HookFunc2() {
+    __asm {
+        // Modify the floating-point value being loaded
+        mov dword ptr[esp + 8], 0
+        // Execute the original instructions
+        fld dword ptr[esp + 8]
+
+        // Jump back to the original code
+        jmp OriginalAddress		        // Jump back to the original code
+    }
 }
 
 
@@ -164,7 +244,7 @@ DWORD WINAPI MainThread(LPVOID param) {
     BOOLEAN toogleMap = 0; 
     BOOLEAN toogleResource = 0; 
 	BOOLEAN toogleSteroids = 0; 
-    
+	
 
     while (1) {
         if (GetAsyncKeyState(VK_F2 ) & 0x8000) {
@@ -335,22 +415,23 @@ DWORD WINAPI MainThread(LPVOID param) {
             HWND hGameWindow = FindWindow(NULL, L"Age of Empires Expansion");
             DWORD pID = 0;
             GetWindowThreadProcessId(hGameWindow, &pID);
-            HANDLE processHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pID);
-            TCHAR gameName[13];
-            wcscpy_s(gameName, 13, L"Empiresx.exe");
-            DWORD gameBaseAddress = GetModuleBaseAddress(gameName, pID);
+            HANDLE processHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pID); // Lấy handle của process 
+			TCHAR gameName[13];                                                 // Tên của game
+			wcscpy_s(gameName, 13, L"Empiresx.exe");							// Copy tên game vào biến gameName
+			DWORD gameBaseAddress = GetModuleBaseAddress(gameName, pID);		// Lấy địa chỉ base của game
             DWORD offsetGameToBaseAddressResource = 0xF3B66;                    // Empriesx.exe + F3B66 
-            DWORD TargetAddressBuyResource = gameBaseAddress + offsetGameToBaseAddressResource;
-            BYTE faddBytes[] = { 0xD8, 0xC1 };                          //fadd
-            BYTE OriginalBytes[] = { 0xD8, 0xE1 };                      //fsub
+			DWORD TargetAddressBuyResource = gameBaseAddress + offsetGameToBaseAddressResource;// Địa chỉ của resource mình quan tâm trong game memory 
+            BYTE faddBytes[] = { 0xD8, 0xC1 };                                  // opcode của fadd
+            BYTE OriginalBytes[] = { 0xD8, 0xE1 };                              // opcode của fsub
 
-            DWORD offsetGameToBaseAddressUpgrade = 0xED50A;
+			DWORD offsetGameToBaseAddressUpgrade = 0xED50A; // 
             DWORD TargetAddressBuyUpgrade = gameBaseAddress + offsetGameToBaseAddressUpgrade;
-            BYTE UpgradeAddBytes[] = {0xD8, 0x45, 0xFC};
-            BYTE UpgradeOriginalBytes[] = { 0xD8, 0x65, 0xFC };
+			BYTE UpgradeAddBytes[] = { 0xD8, 0x45, 0xFC }; // opcode của phần muốn thay đổi (patching bytes)
+			BYTE UpgradeOriginalBytes[] = { 0xD8, 0x65, 0xFC }; // opcode của phần muốn thay đổi (patching bytes)
 
             if (toogleResource) {
-                
+				// WriteProcessMemory : Ghi vào memory của process, 1. Handle của process, 2. Địa chỉ cần ghi, 3. Dữ liệu cần ghi, 4. Kích thước của dữ liệu cần ghi, 5. NULL
+				// Handle của 1 process cứ tưởng tượng là cái vé, m phải có vé của process đó mới được vào
                 WriteProcessMemory(processHandle, (LPVOID)TargetAddressBuyResource, faddBytes, sizeof(faddBytes), NULL);
                 WriteProcessMemory(processHandle, (LPVOID)TargetAddressBuyUpgrade, UpgradeAddBytes, sizeof(UpgradeAddBytes), NULL);
             }
@@ -362,14 +443,29 @@ DWORD WINAPI MainThread(LPVOID param) {
         }
         Sleep(100);
 
-        if (GetAsyncKeyState(VK_F10) & 0x8000) {
-            // Reveal Map + No Fog
-            toogleMap != toogleMap; 
+        if (GetAsyncKeyState(VK_F5) & 0x8000) {
+            // Hook at: `fld dword ptr ss:[esp+8]` which is `0x0045DF23` and `jmp` back at `0x0045DF2A` `fadd dword ptr ds:[ecx+eax*4]` 
+            DWORD HookAddress = 0x0045DF23;           // Address of the function to hook
+            int len = 7;                              // Length of the function to hook
+            
+            InstallHook((void*)HookAddress, HookFunc, len);
+
+            // Develop the toggle hook function 
+            BYTE OriginalBytes[7];                    // Store the original bytes here
+            memcpy(OriginalBytes, (void*)HookAddress, len);
+
+            // Unhook
+            DWORD curProtection;
+            VirtualProtect((void*)HookAddress, len, PAGE_EXECUTE_READWRITE, &curProtection);
+            memcpy((void*)HookAddress, OriginalBytes, len);
+            VirtualProtect((void*)HookAddress, len, curProtection, &curProtection);
+
         }
         Sleep(100);
 
         if (GetAsyncKeyState(VK_F11) & 0x8000) {
-            // Xem hết thông tin đối thủ
+            // Settings 
+
         }
 
     }
